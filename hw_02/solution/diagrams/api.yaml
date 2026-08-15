@@ -1,0 +1,184 @@
+---
+openapi: 3.1.0
+
+info:
+  title: API Сервиса бронирования отелей
+  version: 0.0.1
+servers:
+  - url: https://api.service-bronirovaniya.space/v1
+paths:
+  /search:
+    get:
+      summary: Поиск доступных номеров
+      description: Возвращает список доступных номеров для выбранных дат.
+      parameters:
+        - in: query
+          name: country
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: city
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: checkIn
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: checkOut
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: guests
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+
+      responses:
+        "200":
+          description: Список доступных номеров.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Room'
+
+  /bookings:
+    post:
+      summary: Создание бронирования
+      description: Создает новое бронирование и запускает процесс оплаты.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+
+      responses:
+        "201":
+          description: Бронирование создано.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+
+        "409":
+          description: Номер уже забронирован.
+
+        "400":
+          description: Ошибка валидации.
+
+  /bookings/{bookingId}:
+    get:
+      summary: Получение информации о бронировании
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+        "200":
+          description: Информация о бронировании.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        "404":
+          description: Бронирование не найдено.
+
+    delete:
+      summary: Отмена бронирования
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+        "204":
+          description: Бронирование отменено.
+        "404":
+          description: Бронирование не найдено.
+
+components:
+  schemas:
+    Room:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        hotelName:
+          type: string
+        roomType:
+          type: string
+        country:
+          type: string
+        city:
+          type: string
+        price:
+          type: number
+          format: double
+        currency:
+          type: string
+        available:
+          type: boolean
+
+    CreateBookingRequest:
+      type: object
+      required:
+        - roomId
+        - checkIn
+        - checkOut
+        - guests
+      properties:
+        roomId:
+          type: string
+          format: uuid
+        checkIn:
+          type: string
+          format: date
+        checkOut:
+          type: string
+          format: date
+        guests:
+          type: integer
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        roomId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - CREATED
+            - WAITING_PAYMENT
+            - CONFIRMED
+            - CANCELLED
+            - FAILED
+        totalPrice:
+          type: number
+          format: double
+        currency:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
